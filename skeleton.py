@@ -39,7 +39,7 @@ def find_cluster_node(node: str) -> str:
     )
 
     # Guard against no clusters or not enough clusters being found.
-    if len(clusters) == 0:
+    if clusters is None:
         raise AttributeError(f"There are no skinclusters attached to {node}")
     elif len(clusters) != 1:
         raise ValueError(f"There are multiple skinclusters connected to {node}")
@@ -60,41 +60,65 @@ def find_influence_list(cluster: str) -> list:
 
     Returns:
         list: List of connected influences.
-    """    
+    """
 
-    if(cmds.objExists(cluster) == False):
+    if cmds.objExists(cluster) == False:
         raise ValueError(f"No cluster node called {cluster} exists in the scene.")
-    elif(cmds.objectType(cluster) != 'skinCluster'):
+    elif cmds.objectType(cluster) != "skinCluster":
         raise TypeError(f"{cluster} is not of type 'skinCluster'.")
-    
+
     influences = cmds.skinCluster(cluster, query=True, influence=True)
 
-    if(len(influences == 0)):
+    if len(influences) == 0:
         raise ValueError(f"This skinCluster has no connected influences")
-    
+
     return influences
 
 
 def copy_influence_tree(top_joint: str, inf_list: str) -> list:
-  
-    for sourceJoint in cmds.listRelatives(top_joint, allDescendents=True, type='joint'):
-        # Check if the source joint is in the list of joints to copy
-        if sourceJoint in inf_list:
-            # Duplicate the joint
-            duplicateJoint = cmds.duplicate(sourceJoint, parentOnly=True)[0]
-            
-            # Get the parent of the source joint
-            parentJoint = cmds.listRelatives(sourceJoint, parent=True)
-            
-            # If there is a parent, find the corresponding parent joint in the destination skeleton
-            if parentJoint:
-                parentJoint = parentJoint[0].replace(top_joint, destinationSkeleton)
-            
-            # If the parent joint exists in the destination skeleton, parent the duplicate joint to it
-            if cmds.objExists(parentJoint):
-                cmds.parent(duplicateJoint, parentJoint)
-            else:
-                # If the parent joint doesn't exist, parent it to the destination skeleton root joint
-                cmds.parent(duplicateJoint, destinationSkeleton)
+    """Given a list of influences to a skin, rebuilds them as best as possible.  Will try to retain
+    parent structure, provided all influences in use are part of the parent structure.  If any
+    influences are not used in the skin cluster, they are bypassed-- probably at no cost to the
+    animation accuracy.
 
-# 
+    Args:
+        top_joint (str): Highest joint of the skeleton to copy.
+        inf_list (str): List of joints that actually matter to the cluster.
+
+    Returns:
+        list: List of all duplicated influences.  They will be parented in scene, but an unordered
+        list returned.
+    """
+
+    # Copy the topmost joint.
+    dup_top_joint = cmds.duplicate(
+        top_joint, un=False, ic=False, po=True, n=f"{top_joint}_INF"
+    )[0]
+    influence_tree = [dup_top_joint]
+
+    # Duplicate all influence joints.
+    for source_joint in cmds.listRelatives(top_joint, ad=True, type="joint"):
+        print(f"Duplicating {source_joint}")
+        # Check if the source joint is in the list of joints to copy
+        if source_joint in inf_list:
+            # Duplicate the joint
+            dup_joint = cmds.duplicate(
+                source_joint, po=True, n=f"{source_joint}_INF", un=False, ic=False
+            )[0]
+            influence_tree.append(dup_joint)
+
+            cmds.parent(dup_joint, dup_top_joint)
+
+    # Once they are all created, we can parent them based on how they were parented before.
+    for source_joint in cmds.listRelatives(top_joint, ad=True, type="joint"):
+        if source_joint in inf_list:
+            parent = cmds.listRelatives(source_joint, parent=True)[0]
+            # Make sure a parent is actually found, and it's not already the top_joint duplicate.
+            if parent is not None and parent:
+                if (
+                    cmds.listRelatives(f"{source_joint}_INF", parent=True)[0]
+                    != f"{parent}_INF"
+                ):
+                    cmds.parent(f"{source_joint}_INF", f"{parent}_INF")
+
+    return influence_tree
