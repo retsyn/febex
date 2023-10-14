@@ -11,41 +11,6 @@ Modified By: Matthew Riche
 import maya.cmds as cmds
 
 
-def find_cluster_node(node: str) -> str:
-    """Finds the skin cluster node affecting a given mesh node.
-
-    Args:
-        node (str): Name of a node of type 'mesh' in the scene.
-
-    Raises:
-        ValueError: The given node name can't find a node.
-        TypeError: The given node name isn't a mesh.
-        AttributeError: The given mesh doesn't have a skin cluster attached.
-        ValueError: There are more than one incoming skin cluster node attached to this mesh.
-
-    Returns:
-        str: Name of the skinCluster node.
-    """
-
-    # Guard against the wrong node name or type.
-    if cmds.objExists(node) == False:
-        raise ValueError(f"{node} is not in the scene or is not unique.")
-    elif cmds.objectType(node) != "mesh":
-        raise TypeError(f"{node} was not a mesh.")
-
-    # Find the connections of the skinCluster type.
-    clusters = cmds.listConnections(
-        node, source=True, destination=False, type="skinCluster"
-    )
-
-    # Guard against no clusters or not enough clusters being found.
-    if clusters is None:
-        raise AttributeError(f"There are no skinclusters attached to {node}")
-    elif len(clusters) != 1:
-        raise ValueError(f"There are multiple skinclusters connected to {node}")
-
-    return clusters[0]
-
 
 def find_influence_list(cluster: str) -> list:
     """Finds all the influences connected to a cluster.
@@ -96,9 +61,11 @@ def copy_influence_tree(top_joint: str, inf_list: str) -> list:
     )[0]
     influence_tree = [dup_top_joint]
 
+    export_group = cmds.createNode('transform', n="export_group")
+
+
     # Duplicate all influence joints.
     for source_joint in cmds.listRelatives(top_joint, ad=True, type="joint"):
-        print(f"Duplicating {source_joint}")
         # Check if the source joint is in the list of joints to copy
         if source_joint in inf_list:
             # Duplicate the joint
@@ -121,4 +88,15 @@ def copy_influence_tree(top_joint: str, inf_list: str) -> list:
                 ):
                     cmds.parent(f"{source_joint}_INF", f"{parent}_INF")
 
+    cmds.parent(dup_top_joint, export_group)
+
     return influence_tree
+
+
+def bind_exported_skeleton(old_infs: list):
+    
+    print("Binding new export skeleton to old skeleton...")
+    for jnt in old_infs:
+        pconstraint = cmds.parentConstraint(jnt, f"{jnt}_INF", mo=False)[0]
+        # Make this a 'no flip' constraint.
+        cmds.setAttr(f"{pconstraint}.interpType", 0)

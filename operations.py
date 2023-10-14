@@ -7,10 +7,26 @@ Modified By: Matthew Riche
 """
 
 import maya.cmds as cmds
+from . import skeleton
+from . import skinning
 
-
-def build_export_content(target_geo, new_mesh=True):
+def build_export_content(target_geo, top_joint, new_mesh=True):
     mesh = sanitize_mesh(target_geo)
+    print(f"Mesh shape node is {mesh}, of type {cmds.objectType(mesh)}...")
+
+    old_cluster = skinning.find_cluster_node(mesh)
+    print(f"Identified original skinCluster: \"{old_cluster}\"...")
+    old_influences = skeleton.find_influence_list(old_cluster)
+    new_influences = skeleton.copy_influence_tree(top_joint, old_influences)
+    print(f"Copied new skeleton based on valid influences:\n{new_influences}")
+
+    new_mesh = sanitize_mesh(skinning.copy_mesh(mesh))
+    print(f"Created new mesh: \"{new_mesh}\"...")
+    new_cluster = skinning.bind_skin(new_mesh, new_influences)
+
+    skeleton.bind_exported_skeleton(old_influences)
+
+    
 
 
 def sanitize_mesh(mesh_node: str) -> str:

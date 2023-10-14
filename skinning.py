@@ -8,6 +8,44 @@ Modified By: Matthew Riche
 
 import maya.cmds as cmds
 
+from . import skeleton
+
+
+def find_cluster_node(node: str) -> str:
+    """Finds the skin cluster node affecting a given mesh node.
+
+    Args:
+        node (str): Name of a node of type 'mesh' in the scene.
+
+    Raises:
+        ValueError: The given node name can't find a node.
+        TypeError: The given node name isn't a mesh.
+        AttributeError: The given mesh doesn't have a skin cluster attached.
+        ValueError: There are more than one incoming skin cluster node attached to this mesh.
+
+    Returns:
+        str: Name of the skinCluster node.
+    """
+
+    # Guard against the wrong node name or type.
+    if cmds.objExists(node) == False:
+        raise ValueError(f"{node} is not in the scene or is not unique.")
+    elif cmds.objectType(node) != "mesh":
+        raise TypeError(f"{node} was not a mesh.")
+
+    # Find the connections of the skinCluster type.
+    clusters = cmds.listConnections(
+        node, source=True, destination=False, type="skinCluster"
+    )
+
+    # Guard against no clusters or not enough clusters being found.
+    if clusters is None:
+        raise AttributeError(f"There are no skinclusters attached to {node}")
+    elif len(clusters) != 1:
+        raise ValueError(f"There are multiple skinclusters connected to {node}")
+
+    return clusters[0]
+
 
 def copy_mesh(mesh: str) -> str:
     """Duplicates the given mesh (with sanitization of input.)
@@ -29,7 +67,10 @@ def copy_mesh(mesh: str) -> str:
     if cmds.objectType(mesh) != "mesh":
         raise TypeError(f"{mesh} wasn't of node type 'mesh'.  No use copying this.")
 
-    return cmds.duplicate(mesh, n=f"{mesh}_EXP")[0]
+    # Find the transform and duplicate that, so we don't create anything wonky:
+    trans_name = cmds.listRelatives(mesh, p=True)[0]
+
+    return cmds.duplicate(mesh, n=f"{trans_name}_EXP")[0]
 
 
 def bind_skin(mesh: str, inf_list: list):
@@ -47,13 +88,15 @@ def bind_skin(mesh: str, inf_list: list):
     """
 
     # Guard against the mesh node not being found or being the right type.
-    if cmds.objExists(mesh) != False:
+    if cmds.objExists(mesh) == False:
         raise ValueError(f"{mesh} doesn't exist or is not unique.")
-    if cmds.objectType(mesh) != "mesh":
-        raise TypeError(f"{mesh} isn't a mesh node.  Can't bind a skin to it.")
+    if(cmds.listRelatives(mesh, s=True) is None):
+        mesh_shape = mesh
+    if cmds.objectType(mesh_shape) != "mesh":
+        raise TypeError(f"{mesh_shape} isn't a mesh node.  Can't bind a skin to it.")
 
     # Guard against inf list being empty or containing non-joints.
-    if len(list) == 0:
+    if len(inf_list) == 0:
         raise ValueError(f"Influence list doesn't contain anything to bind.")
     for joint in inf_list:
         if cmds.objectType(joint) != "joint":
@@ -61,9 +104,33 @@ def bind_skin(mesh: str, inf_list: list):
 
     # Clear the selection and then select the influences.
     cmds.select(cl=True)
-    cmds.select(inf_list)
-    return cmds.bindSkin(mesh, tsb=True, cj=False)
+
+    return cmds.skinCluster(mesh_shape, inf_list, bm=0)[0]
 
 
-def copy_skinning(old_cluster: str, new_cluster: str):
-    cmds.copySkinWeights(ss=old_cluster, ds=new_cluster, nm=True, sa="closestPoint", ia="name")
+def copy_skinning(old_mesh: str, new_mesh: str):
+
+    print(f"Copying {old_mesh} skin influence to {new_mesh} skin influence.")
+
+    old_cluster = find_cluster_node(old_mesh)
+    new_cluster = find_cluster_node(new_mesh)
+
+    
+    verts = cmds.ls(f"{old_mesh}.vtx[*]", flatten=True)
+    print(f"Copying skin weights from {old_mesh} to {new_mesh}, this may take some time...")
+    inf_data = cmds.skinCluster(old_cluster, q=True, inf=True)
+    total_verts = len(verts)
+    current_vert = 0
+    for vert in verts:
+        print(f"{current_vert / total_verts}% complete.")
+        dest_vert = vert.replace(".vtx", "_EXP.vtx")
+        
+        vertex_data = cmds.skinPercent(old_cluster, vert, q=True, value=True)
+        
+        for joint, weight in zip(inf_data, vertex_data):
+            dest_joint = joint + "_INF"
+            cmds.skinPercent(new_cluster, dest_vert, transformValue=(dest_joint, weight))
+        current_vert += 1
+        
+
+    #cmds.copySkinWeights(ss=old_cluster, ds=new_cluster, nm=True, sa="closestPoint", ia="name")
