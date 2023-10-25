@@ -33,6 +33,8 @@ def build_export_content(target_geo: MeshData, top_joint: str, new_mesh=True):
             sa='closestPoint', 
             ia=['closestBone', 'closestJoint', 'name']
         )
+    
+    skeleton.bind_exported_skeleton(old_influences)
 
 
 def bake_animated_skeleton(old_influences, new_influences):

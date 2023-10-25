@@ -14,6 +14,8 @@ import os
 from PySide2 import QtCore, QtWidgets as qtw, QtGui, QtUiTools
 from shiboken2 import wrapInstance
 
+from . import operations as ops
+
 
 def maya_main_window():
     main_window_ptr = omui.MQtUtil.mainWindow()
@@ -30,6 +32,8 @@ class Febex_Ui(qtw.QDialog):
         super(Febex_Ui, self).__init__(parent)
 
         self.setWindowTitle(f"FeBeX v{1.0}")
+
+        self.state = UiState()
 
         self.setWindowFlags(self.windowFlags() ^ QtCore.Qt.WindowContextHelpButtonHint)
 
@@ -54,8 +58,20 @@ class Febex_Ui(qtw.QDialog):
         self.ui = loader.load(ui_file, parentWidget=self)
 
         self.ExportAnim_QLabel_QLabel = self.findChild(qtw.QLabel, "ExportAnim_QLabel")
+
+        self.SelectedMesh_QLineEdit_QLineEdit = self.findChild(
+            qtw.QLineEdit, "SelectedMesh_QLineEdit"
+        )
         self.SelectedJoint_QLineEdit_QLineEdit = self.findChild(
             qtw.QLineEdit, "SelectedJoint_QLineEdit"
+        )
+
+        self.BuildExportRig_QPushButton_QPushButton = self.findChild(
+            qtw.QPushButton, "BuildExportRig_QPushButton"
+        )
+
+        self.PopulateMesh_QPushButton_QPushButton = self.findChild(
+            qtw.QPushButton, "PopulateMesh_QPushButton"
         )
         self.PopulateJoint_QPushButton_QPushButton = self.findChild(
             qtw.QPushButton, "PopulateJoint_QPushButton"
@@ -69,7 +85,121 @@ class Febex_Ui(qtw.QDialog):
         self.Version_QLabel_QLabel = self.findChild(qtw.QLabel, "Version_QLabel")
         self.Authorship_QLabel_QLabel = self.findChild(qtw.QLabel, "Authorship_QLabel")
 
+        # connections:
+        self.PopulateMesh_QPushButton_QPushButton.clicked.connect(
+            lambda: self._get_selection(type=0)
+        )
+
+        self.PopulateJoint_QPushButton_QPushButton.clicked.connect(
+            lambda: self._get_selection(type=1)
+        )
+
+        self.SelectedMesh_QLineEdit_QLineEdit.returnPressed.connect(
+            lambda: self._validate_export_rig_button()
+        )
+
+        self.SelectedJoint_QLineEdit_QLineEdit.returnPressed.connect(
+            lambda: self._validate_export_rig_button()
+        )
+
+        self.BuildExportRig_QPushButton_QPushButton.clicked.connect(
+            lambda: self._build_export_rig()
+        )
+
         self.show()
+
+    def _build_export_rig(self):
+        ops.build_export_content(self.state.selected_mesh, self.state.selected_joint)
+
+
+    def _get_selection(self, type):
+        selection = cmds.ls(sl=True)
+
+        if len(selection) != 1:
+            if type == 0:
+                cmds.inViewMessage(
+                    amg="<hl>Select only a single mesh</hl>",
+                    pos="midCenter",
+                    fade=True,
+                )
+                return
+            elif type == 1:
+                cmds.inViewMessage(
+                    amg="<hl>Select only a single joint</hl>",
+                    pos="midCenter",
+                    fade=True,
+                )
+                return
+
+        if type == 0:
+            if cmds.objectType(selection[0]) not in ["mesh", "transform"]:
+                cmds.inViewMessage(
+                    amg="<hl>Selection must be geo or a transform node.</hl>",
+                    pos="midCenter",
+                    fade=True,
+                )
+                return
+        elif type == 1:
+            if cmds.objectType(selection[0]) != "joint":
+                cmds.inViewMessage(
+                    amg="<hl>Selection must be a joint.</hl>",
+                    pos="midCenter",
+                    fade=True,
+                )
+                return
+
+        if type == 0:
+            self.SelectedMesh_QLineEdit_QLineEdit.setText(selection[0])
+        elif type == 1:
+            self.SelectedJoint_QLineEdit_QLineEdit.setText(selection[0])
+
+        self._validate_export_rig_button()
+
+    def _validate_export_rig_button(self):
+        valid = True
+
+        mesh_object = self.SelectedMesh_QLineEdit_QLineEdit.text()
+        joint_object = self.SelectedJoint_QLineEdit_QLineEdit.text()
+
+        if(mesh_object not in [None, ''] and joint_object not in [None, '']):
+            if (
+                cmds.objExists(mesh_object) == False
+                or cmds.objExists(joint_object) == False
+            ):
+                valid = False
+                cmds.inViewMessage(
+                    amg="<hl>Specified Objects not found in scene.</hl>",
+                    pos="midCenter",
+                    fade=True,
+                )
+
+            else:
+                if cmds.objectType(mesh_object) not in ["mesh", "transform"]:
+                    cmds.inViewMessage(
+                        amg=f"<hl>{mesh_object} isn't a mesh.</hl>",
+                        pos="midCenter",
+                        fade=True,
+                    )
+                    valid = False
+
+                if cmds.objectType(joint_object) != "joint":
+                    cmds.inViewMessage(
+                        amg=f"<hl>{joint_object} isn't a joint.</hl>",
+                        pos="midCenter",
+                        fade=True,
+                    )
+                    valid = False
+        else:
+            valid = False
+
+        if(valid == True):
+            self.state.selected_mesh = mesh_object
+            self.state.selected_joint = joint_object
+        else:
+            self.state.selected_mesh = None
+            self.state.selected_mesh = None
+
+        self.BuildExportRig_QPushButton_QPushButton.setEnabled(valid)
 
 
 class UiState:

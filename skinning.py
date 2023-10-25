@@ -39,9 +39,27 @@ def find_cluster_node(node: str) -> str:
         node, source=True, destination=False, type="skinCluster"
     )
 
+    print(f"Clusters found are: {clusters}" )
     # Guard against no clusters or not enough clusters being found.
     if clusters is None:
-        raise AttributeError(f"There are no skinclusters attached to {node}")
+        # The cluster might not exist, or there are nodes between it and out mesh.  Falling back to
+        # the slower type of check:
+        # List all nodes in the history of the mesh
+        history_nodes = cmds.listHistory(node)
+
+        # Initialize a variable to store the skin cluster node name
+        skin_cluster_node = None
+
+        # Loop through the history nodes and find the skin cluster
+        for node in history_nodes:
+            node_type = cmds.nodeType(node)
+            if node_type == 'skinCluster':
+                skin_cluster_node = node
+                break
+        if(skin_cluster_node is None):
+            raise AttributeError(f"There are no skinclusters attached to {node}")
+        else:
+            clusters = [skin_cluster_node]
     elif len(clusters) != 1:
         raise ValueError(f"There are multiple skinclusters connected to {node}")
 
