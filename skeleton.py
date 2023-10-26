@@ -94,7 +94,13 @@ def copy_influence_tree(top_joint: str, inf_list: str) -> list:
 
 
 def bind_exported_skeleton(old_infs: list):
-    
+    """Binds 1:1 the original influences to the new influences with parent constraints set to
+    'no-flip'.
+
+    Args:
+        old_infs (list): The list of old influences.
+    """    
+
     print("Binding new export skeleton to old skeleton...")
     for jnt in old_infs:
         pconstraint = cmds.parentConstraint(jnt, f"{jnt}_INF", mo=False)[0]

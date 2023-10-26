@@ -39,7 +39,7 @@ def find_cluster_node(node: str) -> str:
         node, source=True, destination=False, type="skinCluster"
     )
 
-    print(f"Clusters found are: {clusters}" )
+    print(f"Clusters found are: {clusters}")
     # Guard against no clusters or not enough clusters being found.
     if clusters is None:
         # The cluster might not exist, or there are nodes between it and out mesh.  Falling back to
@@ -53,10 +53,10 @@ def find_cluster_node(node: str) -> str:
         # Loop through the history nodes and find the skin cluster
         for node in history_nodes:
             node_type = cmds.nodeType(node)
-            if node_type == 'skinCluster':
+            if node_type == "skinCluster":
                 skin_cluster_node = node
                 break
-        if(skin_cluster_node is None):
+        if skin_cluster_node is None:
             raise AttributeError(f"There are no skinclusters attached to {node}")
         else:
             clusters = [skin_cluster_node]
@@ -126,5 +126,3 @@ def copy_skinning(old_mesh: str, new_mesh: str):
                 new_cluster, dest_vert, transformValue=(dest_joint, weight)
             )
         current_vert += 1
-
-    # cmds.copySkinWeights(ss=old_cluster, ds=new_cluster, nm=True, sa="closestPoint", ia="name")

@@ -12,7 +12,19 @@ from . import skinning
 from .mesh import MeshData
 
 
-def build_export_content(target_geo: MeshData, top_joint: str, new_mesh=True):
+def build_export_content(target_geo: MeshData, top_joint: str, new_mesh=True) -> tuple:
+    """This will create a group in the scene that will have save components to export as FBX to a
+    game engine.
+
+    Args:
+        target_geo (MeshData): The skin-cluster mesh (should be just one!)
+        top_joint (str): Top of the joint hierarchy.
+        new_mesh (bool, optional): Whether a mesh should be duplicated or just a skeleton.
+        Defaults to True.
+
+    Returns:
+        tuple: The new and old influences to be used in later operations.
+    """
     mesh = MeshData(target_geo)
     print(f"Mesh shape node is {mesh.mesh_node}.")
 
@@ -35,18 +47,26 @@ def build_export_content(target_geo: MeshData, top_joint: str, new_mesh=True):
         ia=["closestBone", "closestJoint", "name"],
     )
 
+    return (old_influences, new_influences)
 
 
-def bake_animated_skeleton(old_influences, new_influences):
+def bake_animated_skeleton(old_influences: list, new_influences: list):
+    """Runs a bake simulation on the influences of the exported skeleton.
+
+    Args:
+        old_influences (list): Influence list of the original rig.
+        new_influences (list): Influence list of the export skeleton.
+    """
     skeleton.bind_exported_skeleton(old_influences)
 
-    current_frame = int(cmds.currentTime(query=True))
+    start_time = cmds.playbackOptions(query=True, minTime=True)
+    end_time = cmds.playbackOptions(query=True, maxTime=True)
 
     cmds.select(new_influences, r=True)
 
     cmds.bakeResults(
         simulation=True,
-        t=(current_frame, current_frame),
+        t=(start_time, end_time),
         sampleBy=1,
         disableImplicitControl=True,
         preserveOutsideKeys=True,
@@ -57,4 +77,3 @@ def bake_animated_skeleton(old_influences, new_influences):
         controlPoints=False,
         shape=True,
     )
-

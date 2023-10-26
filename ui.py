@@ -108,13 +108,38 @@ class Febex_Ui(qtw.QDialog):
             lambda: self._build_export_rig()
         )
 
+        self.BakeAnim_QPushButton_QPushButton.clicked.connect(
+            lambda: self._bake_skeleton()
+        )
+
         self.show()
+        self._validate_bake_button()
+        self._validate_export_rig_button()
 
     def _build_export_rig(self):
-        ops.build_export_content(self.state.selected_mesh, self.state.selected_joint)
+        """Wraps the operations.build_export_content() function.
+        """        
+        infs = ops.build_export_content(
+            self.state.selected_mesh, self.state.selected_joint
+        )
+        self.state.old_influence_list = infs[0]
+        self.state.new_influence_list = infs[1]
         self._validate_bake_button()
 
-    def _get_selection(self, type):
+    def _bake_skeleton(self):
+        """Wraps the operations.bake_animated_skeleton() function.
+        """        
+        print(f"Reviewing state:\n{self.state.old_influence_list}\n{self.state.new_influence_list}")
+        ops.bake_animated_skeleton(
+            self.state.old_influence_list, self.state.new_influence_list
+        )
+
+    def _get_selection(self, type: int):
+        """Populates a lineedit field with something selected from the scene.
+
+        Args:
+            type (int): 0 for mesh selection, 1 for joint selection.
+        """        
         selection = cmds.ls(sl=True)
 
         if len(selection) != 1:
@@ -158,7 +183,8 @@ class Febex_Ui(qtw.QDialog):
         self._validate_export_rig_button()
 
     def _validate_bake_button(self):
-        
+        """Based on context, determine if the bake button should be usable.
+        """        
         valid = True
         if cmds.objExists("export_group") == False:
             valid = False
@@ -166,6 +192,9 @@ class Febex_Ui(qtw.QDialog):
         self.BakeAnim_QPushButton_QPushButton.setEnabled(valid)
 
     def _validate_export_rig_button(self):
+        """Based on state and scene context, determines if the Build export rig button should be 
+        available.
+        """        
         valid = True
 
         mesh_object = self.SelectedMesh_QLineEdit_QLineEdit.text()
@@ -220,6 +249,9 @@ class UiState:
         self._last_rig_path = None
         self._last_anim_path = None
 
+        self._old_inf_list = None
+        self._new_inf_list = None
+
     @property
     def selected_mesh(self):
         return self._selected_mesh
@@ -251,4 +283,20 @@ class UiState:
 
     @anim_path.setter
     def anim_path(self, value):
-        self._last_anim_path
+        self._last_anim_path = value
+
+    @property
+    def new_influence_list(self):
+        return self._new_inf_list
+
+    @new_influence_list.setter
+    def new_influence_list(self, value):
+        self._new_inf_list = value
+
+    @property
+    def old_influence_list(self):
+        return self._old_inf_list
+
+    @old_influence_list.setter
+    def old_influence_list(self, value):
+        self._old_inf_list = value

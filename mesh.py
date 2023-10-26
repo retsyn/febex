@@ -33,7 +33,7 @@ class MeshData:
         if cmds.objectType(mesh) == "transform":
             self.trans_node = mesh
             relatives = cmds.listRelatives(mesh, s=True)
-            if(relatives is None):
+            if relatives is None:
                 raise TypeError(f"{mesh} doesn't have a shape node.")
             else:
                 self.mesh_node = relatives[0]
@@ -42,7 +42,6 @@ class MeshData:
             self.trans_node = cmds.listRelatives(mesh, p=True)[0]
         else:
             raise TypeError(f"{mesh} is of type {cmds.objectType(mesh)}, not 'mesh'")
-
 
     @property
     def shape(self):

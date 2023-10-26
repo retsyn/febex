@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>656</width>
-    <height>289</height>
+    <height>187</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -19,14 +19,14 @@
      <x>9</x>
      <y>9</y>
      <width>641</width>
-     <height>266</height>
+     <height>171</height>
     </rect>
    </property>
    <layout class="QVBoxLayout" name="verticalLayout">
     <item>
      <widget class="QLabel" name="Version_QLabel">
       <property name="text">
-       <string>Febex 1.0.0</string>
+       <string>Febex - The simple FBX export prepper.</string>
       </property>
      </widget>
     </item>
@@ -129,36 +129,7 @@
         </property>
        </widget>
       </item>
-      <item>
-       <widget class="QPushButton" name="pushButton_2">
-        <property name="enabled">
-         <bool>false</bool>
-        </property>
-        <property name="toolTip">
-         <string extracomment="Exports and .FBX of the Deformable Mesh derived from the rig."/>
-        </property>
-        <property name="text">
-         <string>Export Deformable Mesh</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="pushButton_3">
-        <property name="enabled">
-         <bool>false</bool>
-        </property>
-        <property name="toolTip">
-         <string extracomment="Exports and FBX of just the animated skeleton."/>
-        </property>
-        <property name="text">
-         <string>Export Animated Joints</string>
-        </property>
-       </widget>
-      </item>
      </layout>
-    </item>
-    <item>
-     <widget class="QTextBrowser" name="Output"/>
     </item>
    </layout>
   </widget>
