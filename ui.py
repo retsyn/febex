@@ -47,6 +47,7 @@ class Febex_Ui(qtw.QDialog):
 
     def _init_ui(self):
         """Finds the path and wraps the loader."""
+
         mod_path = os.path.abspath(__file__)
         parent_path = os.path.dirname(mod_path)
         print('Febex path is "{}"'.format(parent_path))
@@ -82,6 +83,7 @@ class Febex_Ui(qtw.QDialog):
         self.verticalLayoutWidget_QWidget = self.findChild(
             qtw.QWidget, "verticalLayoutWidget"
         )
+
         self.Version_QLabel_QLabel = self.findChild(qtw.QLabel, "Version_QLabel")
         self.Authorship_QLabel_QLabel = self.findChild(qtw.QLabel, "Authorship_QLabel")
 
@@ -110,7 +112,7 @@ class Febex_Ui(qtw.QDialog):
 
     def _build_export_rig(self):
         ops.build_export_content(self.state.selected_mesh, self.state.selected_joint)
-
+        self._validate_bake_button()
 
     def _get_selection(self, type):
         selection = cmds.ls(sl=True)
@@ -155,13 +157,21 @@ class Febex_Ui(qtw.QDialog):
 
         self._validate_export_rig_button()
 
+    def _validate_bake_button(self):
+        
+        valid = True
+        if cmds.objExists("export_group") == False:
+            valid = False
+
+        self.BakeAnim_QPushButton_QPushButton.setEnabled(valid)
+
     def _validate_export_rig_button(self):
         valid = True
 
         mesh_object = self.SelectedMesh_QLineEdit_QLineEdit.text()
         joint_object = self.SelectedJoint_QLineEdit_QLineEdit.text()
 
-        if(mesh_object not in [None, ''] and joint_object not in [None, '']):
+        if mesh_object not in [None, ""] and joint_object not in [None, ""]:
             if (
                 cmds.objExists(mesh_object) == False
                 or cmds.objExists(joint_object) == False
@@ -192,7 +202,7 @@ class Febex_Ui(qtw.QDialog):
         else:
             valid = False
 
-        if(valid == True):
+        if valid == True:
             self.state.selected_mesh = mesh_object
             self.state.selected_joint = joint_object
         else:
